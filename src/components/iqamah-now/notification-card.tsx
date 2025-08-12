@@ -12,7 +12,7 @@ interface NotificationCardProps {
     isRamadan: boolean;
 }
 
-const prayerOrder: (keyof PrayerTimesType)[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+const prayerOrder: (keyof Omit<PrayerTimesType, 'Sunrise' | 'Imsak'>)[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 
 const getNextPrayer = (prayerTimes: PrayerTimesType | null) => {
     if (!prayerTimes) return null;
@@ -20,21 +20,25 @@ const getNextPrayer = (prayerTimes: PrayerTimesType | null) => {
     const now = new Date();
 
     for (const prayer of prayerOrder) {
-        const prayerTimeStr = prayerTimes[prayer];
-        if (!prayerTimeStr) continue;
-        
-        // Parsing time like "5:30 PM"
-        const prayerTime = parse(prayerTimeStr, 'h:mm a', new Date());
+        const prayerInfo = prayerTimes[prayer];
+        if (typeof prayerInfo === 'string') continue; // Skip Sunrise/Imsak
 
-        if (isAfter(prayerTime, now)) {
-             return { name: prayer, time: prayerTime };
+        const iqamahTimeStr = prayerInfo.iqamah;
+        if (!iqamahTimeStr) continue;
+        
+        // Parsing time like "4:28 AM"
+        const iqamahTime = parse(iqamahTimeStr, 'h:mm a', new Date());
+
+        if (isAfter(iqamahTime, now)) {
+             return { name: prayer, time: iqamahTime };
         }
     }
 
     // If all prayers for today are done, the next prayer is Fajr tomorrow.
-    if (prayerTimes.Fajr) {
-        const fajrTime = addDays(parse(prayerTimes.Fajr, 'h:mm a', new Date()), 1);
-        return { name: 'Fajr', time: fajrTime };
+    const fajrInfo = prayerTimes.Fajr;
+    if (fajrInfo && typeof fajrInfo !== 'string' && fajrInfo.iqamah) {
+        const fajrIqamahTime = addDays(parse(fajrInfo.iqamah, 'h:mm a', new Date()), 1);
+        return { name: 'Fajr', time: fajrIqamahTime };
     }
     
     return null;
@@ -88,7 +92,7 @@ export default function NotificationCard({ prayerTimes, isRamadan }: Notificatio
       <CardHeader className='pb-2'>
         <CardTitle className="flex items-center gap-2 text-primary">
           <AlarmClockCheck className="h-6 w-6" />
-          <span>Next Prayer: {nextPrayerInfo.name} at {format(nextPrayerInfo.time, 'h:mm a')}</span>
+          <span>Next Iqamah: {nextPrayerInfo.name} at {format(nextPrayerInfo.time, 'h:mm a')}</span>
         </CardTitle>
       </CardHeader>
       <CardContent>

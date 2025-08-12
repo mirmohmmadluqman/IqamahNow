@@ -1,6 +1,6 @@
 'use client';
 
-import { Moon, Sun, User, Github, Twitter, Globe } from 'lucide-react';
+import { Moon, Sun, User, Github, Twitter, Globe, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -19,7 +19,10 @@ interface HeaderProps {
 export default function Header({ isRamadan, onRamadanToggle }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
-      <h1 className="text-xl font-bold tracking-tight text-primary sm:text-2xl">IqamahNow</h1>
+      <div className="flex items-center gap-2">
+         <Building2 className="h-8 w-8 text-primary" />
+        <h1 className="text-xl font-bold tracking-tight text-primary sm:text-2xl">IqamahNow</h1>
+      </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center space-x-2">
           <Switch id="ramadan-mode" checked={isRamadan} onCheckedChange={onRamadanToggle} />

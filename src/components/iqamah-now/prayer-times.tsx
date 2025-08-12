@@ -3,25 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Sunrise, Sun, Sunset, Moon, UtensilsCrossed, AlertTriangle } from 'lucide-react';
+import { Sunrise, Sun, Sunset, Moon, UtensilsCrossed } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, parse } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { parse } from 'date-fns';
 
+type PrayerInfo = { adhan: string; iqamah: string; };
 export type PrayerTimesType = {
-  Fajr: string;
+  Fajr: PrayerInfo;
+  Dhuhr: PrayerInfo;
+  Asr: PrayerInfo;
+  Maghrib: PrayerInfo;
+  Isha: PrayerInfo;
   Sunrise: string;
-  Dhuhr: string;
-  Asr: string;
-  Maghrib: string;
-  Isha: string;
   Imsak: string;
 };
 
 interface PrayerTimesProps {
   isRamadan: boolean;
-  onPrayerTimesLoad: (times: PrayerTimesType | null) => void;
+  prayerTimes: PrayerTimesType | null;
 }
 
 const prayerIcons = {
@@ -43,7 +42,7 @@ const Countdown = ({ targetTime, label }: { targetTime: string; label: string })
 
     const calculateTimeLeft = () => {
       const now = new Date();
-      // We parse the time string (e.g., "6:30 PM") into a Date object for today.
+      // We parse the time string (e.g., "7:21 PM") into a Date object for today.
       const target = parse(targetTime, 'h:mm a', new Date());
 
       if (isNaN(target.getTime())) return;
@@ -81,79 +80,15 @@ const Countdown = ({ targetTime, label }: { targetTime: string; label: string })
   );
 };
 
+export default function PrayerTimes({ isRamadan, prayerTimes }: PrayerTimesProps) {
+  const loading = !prayerTimes;
 
-export default function PrayerTimes({ isRamadan, onPrayerTimesLoad }: PrayerTimesProps) {
-  const [prayerTimes, setPrayerTimes] = useState<PrayerTimesType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchPrayerTimes = (latitude: number, longitude: number, timezone: string) => {
-      const date = new Date();
-      const formattedDate = format(date, 'dd-MM-yyyy');
-      const method = 2; // University of Islamic Sciences, Karachi
-      const tune = "0,0,0,0,2,0,5,0"; // +2 min Maghrib, +5 min Isha
-      const url = `https://api.aladhan.com/v1/timings/${formattedDate}?latitude=${latitude}&longitude=${longitude}&method=${method}&tune=${tune}`;
-      
-      fetch(url)
-        .then(response => response.json())
-        .then(data => {
-          if (data.code === 200) {
-            const times = data.data.timings;
-             const formatTime = (time: string) => {
-              // The API returns time in 24-hour format (e.g., "17:30")
-              const parsedTime = parse(time, 'HH:mm', new Date());
-              // We convert it to the user's local timezone and format it to 12-hour AM/PM.
-              const zonedTime = toZonedTime(parsedTime, timezone);
-              return format(zonedTime, 'h:mm a');
-            };
-
-            const formattedTimes = {
-              Fajr: formatTime(times.Fajr),
-              Sunrise: formatTime(times.Sunrise),
-              Dhuhr: formatTime(times.Dhuhr),
-              Asr: formatTime(times.Asr),
-              Maghrib: formatTime(times.Maghrib),
-              Isha: formatTime(times.Isha),
-              Imsak: formatTime(times.Imsak),
-            };
-            setPrayerTimes(formattedTimes);
-            onPrayerTimesLoad(formattedTimes);
-          } else {
-            setError('Could not fetch prayer times. API returned an error.');
-          }
-        })
-        .catch(() => {
-          setError('Could not fetch prayer times. Please check your connection.');
-        })
-        .finally(() => setLoading(false));
-    };
-
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          fetchPrayerTimes(position.coords.latitude, position.coords.longitude, timezone);
-        },
-        () => {
-          // Fallback to a default location if geolocation fails
-          setError('Location access denied. Fetching times for Srinagar, Kashmir.');
-          fetchPrayerTimes(34.0837, 74.7973, timezone); // Srinagar coordinates
-        }
-      );
-    } else {
-       setError('Geolocation not supported. Fetching times for Srinagar, Kashmir.');
-       fetchPrayerTimes(34.0837, 74.7973, timezone); // Srinagar coordinates
-    }
-
-  }, [onPrayerTimesLoad]);
-
-  const regularPrayers = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-  const ramadanPrayers = ['Imsak', ...regularPrayers.filter(p => p !== 'Sunrise'), 'Iftar'];
+  const regularPrayers: (keyof PrayerTimesType)[] = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+  const ramadanPrayers: (keyof PrayerTimesType | 'Iftar')[] = ['Imsak', ...regularPrayers.filter(p => p !== 'Sunrise'), 'Iftar'];
   
-  // Use Maghrib time for Iftar
-  const prayerTimesWithIftar = prayerTimes ? { ...prayerTimes, Iftar: prayerTimes.Maghrib } : null;
+  // Use Maghrib adhan time for Iftar
+  const prayerTimesWithIftar = prayerTimes ? { ...prayerTimes, Iftar: prayerTimes.Maghrib.adhan } : null;
+
   const prayersToShow = isRamadan ? ramadanPrayers : regularPrayers;
 
   return (
@@ -162,13 +97,6 @@ export default function PrayerTimes({ isRamadan, onPrayerTimesLoad }: PrayerTime
         <CardTitle className="text-2xl font-headline">Today's Prayer Times</CardTitle>
       </CardHeader>
       <CardContent>
-        {error && (
-           <Alert variant="destructive" className="mb-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
         {loading ? (
             <div className={cn("grid gap-4", "grid-cols-2 sm:grid-cols-3", isRamadan ? "lg:grid-cols-7" : "lg:grid-cols-6")}>
               {prayersToShow.map((prayer) => (
@@ -183,20 +111,32 @@ export default function PrayerTimes({ isRamadan, onPrayerTimesLoad }: PrayerTime
           <>
             {isRamadan && prayerTimesWithIftar && prayerTimesWithIftar.Maghrib && prayerTimesWithIftar.Fajr && (
               <div className="mb-6 grid grid-cols-1 gap-4 rounded-lg bg-accent/10 p-4 md:grid-cols-2">
-                <Countdown targetTime={prayerTimesWithIftar.Maghrib} label="Countdown to Iftar" />
-                <Countdown targetTime={prayerTimesWithIftar.Fajr} label="Countdown to Suhoor ends (Fajr)" />
+                <Countdown targetTime={prayerTimesWithIftar.Maghrib.adhan} label="Countdown to Iftar" />
+                <Countdown targetTime={prayerTimesWithIftar.Fajr.adhan} label="Countdown to Suhoor ends (Fajr)" />
               </div>
             )}
             <div className={cn("grid gap-4", "grid-cols-2 sm:grid-cols-3", isRamadan ? "lg:grid-cols-7" : "lg:grid-cols-6")}>
-              {prayerTimesWithIftar && prayersToShow.map((prayer) => (
-                <Card key={prayer} className="flex flex-col items-center justify-center p-4 text-center transition-transform duration-300 hover:scale-105 hover:shadow-lg">
-                  <div className="mb-2 text-primary">
-                    {prayerIcons[prayer as keyof typeof prayerIcons]}
-                  </div>
-                  <p className="font-semibold text-lg">{prayer}</p>
-                  <p className="text-muted-foreground text-xl font-mono">{prayerTimesWithIftar[prayer as keyof typeof prayerTimesWithIftar]}</p>
-                </Card>
-              ))}
+              {prayerTimesWithIftar && prayersToShow.map((prayer) => {
+                const prayerInfo = prayerTimesWithIftar[prayer as keyof typeof prayerTimesWithIftar];
+                const isSingleTime = typeof prayerInfo === 'string';
+
+                return (
+                  <Card key={prayer} className="flex flex-col items-center justify-center p-3 text-center transition-transform duration-300 hover:scale-105 hover:shadow-lg">
+                    <div className="mb-2 text-primary">
+                      {prayerIcons[prayer as keyof typeof prayerIcons]}
+                    </div>
+                    <p className="font-semibold text-lg">{prayer}</p>
+                    {isSingleTime ? (
+                       <p className="text-muted-foreground text-xl font-mono">{prayerInfo}</p>
+                    ) : (
+                      <div className="text-center font-mono">
+                        <p className="text-sm"><span className="font-sans text-muted-foreground text-xs">Adhan:</span> {prayerInfo.adhan}</p>
+                        <p className="text-base font-bold"><span className="font-sans text-muted-foreground text-xs">Iqamah:</span> {prayerInfo.iqamah}</p>
+                      </div>
+                    )}
+                  </Card>
+                )
+              })}
             </div>
           </>
         )}
@@ -204,6 +144,3 @@ export default function PrayerTimes({ isRamadan, onPrayerTimesLoad }: PrayerTime
     </Card>
   );
 }
-
-// Add this type export
-export type { PrayerTimesProps };
