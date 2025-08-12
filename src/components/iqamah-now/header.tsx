@@ -1,6 +1,6 @@
 'use client';
 
-import { Moon, Sun, User, Github, Twitter, Globe } from 'lucide-react';
+import { Moon, Sun, Github, Twitter, Globe, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -57,7 +57,7 @@ export default function Header({ isRamadan, onRamadanToggle }: HeaderProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="h-8 w-8 rounded-full">
-              <User className="h-4 w-4" />
+              <Code2 className="h-4 w-4" />
               <span className="sr-only">Developer Info</span>
             </Button>
           </DropdownMenuTrigger>
