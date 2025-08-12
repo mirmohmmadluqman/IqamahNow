@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import LiveClock from './live-clock';
 
 interface HeaderProps {
   isRamadan: boolean;
@@ -23,12 +24,13 @@ export default function Header({ isRamadan, onRamadanToggle }: HeaderProps) {
          <Building2 className="h-8 w-8 text-primary" />
         <h1 className="text-xl font-bold tracking-tight text-primary sm:text-2xl">IqamahNow</h1>
       </div>
+      <LiveClock />
       <div className="flex items-center gap-4">
         <div className="flex items-center space-x-2">
           <Switch id="ramadan-mode" checked={isRamadan} onCheckedChange={onRamadanToggle} />
           <Label htmlFor="ramadan-mode" className="flex items-center gap-1 text-sm">
             {isRamadan ? <Moon className="h-4 w-4 text-accent" /> : <Sun className="h-4 w-4" />}
-            <span>Ramadan Mode</span>
+            <span className="hidden sm:inline">Ramadan Mode</span>
           </Label>
         </div>
         <DropdownMenu>
