@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlarmClockCheck, ArrowRight } from 'lucide-react';
+import { AlarmClockCheck } from 'lucide-react';
 import type { PrayerTimesType } from './prayer-times';
-import { parse, addMinutes, format, isAfter, addDays } from 'date-fns';
+import { parse, isAfter, addDays } from 'date-fns';
 
 interface NotificationCardProps {
     prayerTimes: PrayerTimesType | null;
@@ -44,10 +44,55 @@ const getNextPrayer = (prayerTimes: PrayerTimesType | null) => {
     return null;
 }
 
+const Countdown = ({ targetDate, prayerName }: { targetDate: Date; prayerName: string }) => {
+    const calculateTimeLeft = () => {
+        const difference = targetDate.getTime() - new Date().getTime();
+        let timeLeft = { hours: 0, minutes: 0, seconds: 0 };
+
+        if (difference > 0) {
+            timeLeft = {
+                hours: Math.floor(difference / (1000 * 60 * 60)),
+                minutes: Math.floor((difference / 1000 / 60) % 60),
+                seconds: Math.floor((difference / 1000) % 60),
+            };
+        }
+        return timeLeft;
+    };
+
+    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setTimeLeft(calculateTimeLeft());
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    });
+
+    return (
+        <div className="text-center">
+            <p className="text-muted-foreground">The prayer of {prayerName} is in</p>
+            <div className="flex justify-center gap-4 mt-2">
+                <div>
+                    <div className="text-3xl font-bold text-primary">{String(timeLeft.hours).padStart(2, '0')}</div>
+                    <div className="text-xs text-muted-foreground">Hours</div>
+                </div>
+                <div>
+                    <div className="text-3xl font-bold text-primary">{String(timeLeft.minutes).padStart(2, '0')}</div>
+                    <div className="text-xs text-muted-foreground">Minutes</div>
+                </div>
+                <div>
+                    <div className="text-3xl font-bold text-primary">{String(timeLeft.seconds).padStart(2, '0')}</div>
+                    <div className="text-xs text-muted-foreground">Seconds</div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 export default function NotificationCard({ prayerTimes, isRamadan }: NotificationCardProps) {
     const [nextPrayerInfo, setNextPrayerInfo] = useState<{name: string, time: Date} | null>(null);
-    const [travelTime] = useState(15); // Assume 15 minutes travel time for now
 
     useEffect(() => {
         if(prayerTimes) {
@@ -69,40 +114,35 @@ export default function NotificationCard({ prayerTimes, isRamadan }: Notificatio
                 <CardHeader className='pb-2'>
                     <CardTitle className="flex items-center gap-2 text-primary">
                         <AlarmClockCheck className="h-6 w-6" />
-                        <Skeleton className="h-6 w-32" />
+                        <span>Next Prayer Countdown</span>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center justify-between">
-                        <div>
-                             <Skeleton className="h-6 w-40 mb-1" />
-                             <Skeleton className="h-4 w-48" />
+                    <div className="flex items-center justify-between p-4">
+                        <div className='flex flex-col items-center w-full'>
+                            <Skeleton className="h-8 w-32 mb-2" />
+                            <div className="flex gap-4">
+                               <Skeleton className="h-12 w-16" />
+                               <Skeleton className="h-12 w-16" />
+                               <Skeleton className="h-12 w-16" />
+                            </div>
                         </div>
-                         <ArrowRight className="h-6 w-6 text-muted-foreground" />
                     </div>
                 </CardContent>
             </Card>
         );
     }
     
-    const leaveTime = addMinutes(nextPrayerInfo.time, -travelTime);
-
   return (
     <Card className="w-full bg-primary/10 border-primary/20">
-      <CardHeader className='pb-2'>
+       <CardHeader className='pb-2'>
         <CardTitle className="flex items-center gap-2 text-primary">
           <AlarmClockCheck className="h-6 w-6" />
-          <span>Next Iqamah: {nextPrayerInfo.name} at {format(nextPrayerInfo.time, 'h:mm a')}</span>
+          <span>Next Prayer Countdown</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-lg font-semibold">Leave at {format(leaveTime, 'h:mm a')}</p>
-            <p className="text-sm text-muted-foreground">To arrive on time for Jama'ah.</p>
-          </div>
-          <ArrowRight className="h-6 w-6 text-muted-foreground" />
-        </div>
+      <CardContent className="p-4">
+        <Countdown targetDate={nextPrayerInfo.time} prayerName={nextPrayerInfo.name} />
       </CardContent>
     </Card>
   );
