@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { detectNearestMasjid, type DetectNearestMasjidOutput } from '@/ai/flows/detect-nearest-masjid';
-import { MapPin, Loader2, LocateFixed } from 'lucide-react';
-import Image from 'next/image';
+import { MapPin, Loader2, LocateFixed, Navigation } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 export default function MasjidFinder() {
   const [masjid, setMasjid] = useState<DetectNearestMasjidOutput | null>(null);
@@ -58,6 +59,10 @@ export default function MasjidFinder() {
       }
     );
   };
+  
+  const getGoogleMapsUrl = (lat: number, lng: number) => {
+      return `https://www.google.com/maps?q=${lat},${lng}&ll=${lat},${lng}&z=15`;
+  }
 
   return (
     <Card className="w-full">
@@ -82,13 +87,25 @@ export default function MasjidFinder() {
         
         {masjid && (
           <Card className="w-full overflow-hidden bg-secondary/30">
-             <CardContent className="p-4">
-                <div className="relative mb-4 h-40 w-full overflow-hidden rounded-md">
-                    <Image src="https://placehold.co/600x400.png" layout="fill" objectFit="cover" alt="Map placeholder" data-ai-hint="map city" />
-                    <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-destructive" />
+             <CardContent className="p-4 space-y-4">
+                <div className="relative h-48 w-full overflow-hidden rounded-md border">
+                    <iframe
+                        className="h-full w-full"
+                        src={`https://www.google.com/maps/embed/v1/place?key=${MAPS_API_KEY}&q=${masjid.masjidLocation.latitude},${masjid.masjidLocation.longitude}`}
+                        loading="lazy"
+                        allowFullScreen
+                    ></iframe>
                 </div>
-              <h3 className="font-bold text-lg">{masjid.masjidName}</h3>
-              <p className="text-muted-foreground">{masjid.masjidAddress}</p>
+              <div>
+                <h3 className="font-bold text-lg">{masjid.masjidName}</h3>
+                <p className="text-muted-foreground text-sm">{masjid.masjidAddress}</p>
+              </div>
+                <Button asChild className="w-full">
+                    <a href={getGoogleMapsUrl(masjid.masjidLocation.latitude, masjid.masjidLocation.longitude)} target="_blank" rel="noopener noreferrer">
+                        <Navigation className="mr-2 h-4 w-4" />
+                        Get Directions
+                    </a>
+                </Button>
             </CardContent>
           </Card>
         )}

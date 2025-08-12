@@ -8,8 +8,7 @@ import { summarizeAnnouncement } from '@/ai/flows/summarize-masjid-announcements
 import { Megaphone, Bot, Loader2, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-const sampleAnnouncement =
-  "As-salamu alaykum. Join our weekly online dars (Islamic lesson) conducted by Abdul Muqsid from Kashmir. The classes will be held in Urdu every Saturday after Isha prayer. To join the class and receive updates, please use the following WhatsApp group link: https://chat.whatsapp.com/LxOwJgxLQwp36Png87sxeZ. We look forward to seeing you there, In shaa Allah. JazakAllah Khair.";
+const sampleAnnouncement = "استعمل هذا الرابط للانضمام إلى مجموعتي في واتساب: https://chat.whatsapp.com/LxOwJgxLQwp36Png87sxeZ?mode=ac_t By: Abdul Muqsid, Lives in Kashmir, Sunni, Saturday after isha, Class lagnuage Urdu, a messeage for you from him(it will shown there): \"ه 🌺🌺 مرحبا بكم 🌺🌺 Yeh group hamare weekly online dars ke liye banaya gaya hai. In shaa Allah, humari haftay mein only 1 Class hogi. Agle kutch dino mein hum apne dars ka topic, date and day decide karenge. جزاكم الله خيرا \"";
 
 export default function Announcements() {
   const [summary, setSummary] = useState('');
