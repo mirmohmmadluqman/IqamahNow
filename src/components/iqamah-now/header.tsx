@@ -1,6 +1,6 @@
 'use client';
 
-import { Moon, Sun, User, Github, Twitter, Globe, Building2 } from 'lucide-react';
+import { Moon, Sun, User, Github, Twitter, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,11 +17,32 @@ interface HeaderProps {
   onRamadanToggle: (isRamadan: boolean) => void;
 }
 
+const Logo = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-primary"
+    >
+      <path d="M4 22h16" />
+      <path d="M12 4a5 5 0 0 1 5 5v5H7v-5a5 5 0 0 1 5-5z" />
+      <path d="M8 18h8" />
+      <path d="M12 14v4" />
+      <path d="M18 9.5V9a6 6 0 0 0-12 0v.5" />
+    </svg>
+  );
+
 export default function Header({ isRamadan, onRamadanToggle }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
       <div className="flex items-center gap-2">
-         <Building2 className="h-8 w-8 text-primary" />
+         <Logo />
         <h1 className="text-xl font-bold tracking-tight text-primary sm:text-2xl">IqamahNow</h1>
       </div>
       <LiveClock />
