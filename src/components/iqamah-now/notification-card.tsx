@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlarmClockCheck, ArrowRight } from 'lucide-react';
 import type { PrayerTimesType } from './prayer-times';
-import { parse, differenceInMinutes, addMinutes, format, isAfter } from 'date-fns';
+import { parse, addMinutes, format, isAfter, addDays } from 'date-fns';
 
 interface NotificationCardProps {
     prayerTimes: PrayerTimesType | null;
@@ -32,9 +32,12 @@ const getNextPrayer = (prayerTimes: PrayerTimesType | null) => {
     }
 
     // If all prayers for today are done, the next prayer is Fajr tomorrow.
-    const fajrTime = parse(prayerTimes.Fajr, 'h:mm a', new Date());
-    fajrTime.setDate(fajrTime.getDate() + 1);
-    return { name: 'Fajr', time: fajrTime };
+    if (prayerTimes.Fajr) {
+        const fajrTime = addDays(parse(prayerTimes.Fajr, 'h:mm a', new Date()), 1);
+        return { name: 'Fajr', time: fajrTime };
+    }
+    
+    return null;
 }
 
 
@@ -44,10 +47,12 @@ export default function NotificationCard({ prayerTimes, isRamadan }: Notificatio
 
     useEffect(() => {
         if(prayerTimes) {
-             const interval = setInterval(() => {
+             const updateNextPrayer = () => {
                 setNextPrayerInfo(getNextPrayer(prayerTimes));
-            }, 60000); // Update every minute
-            setNextPrayerInfo(getNextPrayer(prayerTimes)); // Initial check
+            };
+
+            updateNextPrayer(); // Initial check
+            const interval = setInterval(updateNextPrayer, 1000 * 60); // Update every minute
 
             return () => clearInterval(interval);
         }

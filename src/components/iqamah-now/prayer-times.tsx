@@ -43,10 +43,12 @@ const Countdown = ({ targetTime, label }: { targetTime: string; label: string })
 
     const calculateTimeLeft = () => {
       const now = new Date();
-      const target = new Date(targetTime);
+      // We parse the time string (e.g., "6:30 PM") into a Date object for today.
+      const target = parse(targetTime, 'h:mm a', new Date());
 
       if (isNaN(target.getTime())) return;
       
+      // If the target time has already passed today, set it for tomorrow.
       if (target < now) {
         target.setDate(target.getDate() + 1);
       }
@@ -89,7 +91,9 @@ export default function PrayerTimes({ isRamadan, onPrayerTimesLoad }: PrayerTime
     const fetchPrayerTimes = (latitude: number, longitude: number, timezone: string) => {
       const date = new Date();
       const formattedDate = format(date, 'dd-MM-yyyy');
-      const url = `https://api.aladhan.com/v1/timingsByCity/${formattedDate}?city=Dubai&country=AE&method=4`;
+      const method = 2; // University of Islamic Sciences, Karachi
+      const tune = "0,0,0,0,2,0,5,0"; // +2 min Maghrib, +5 min Isha
+      const url = `https://api.aladhan.com/v1/timings/${formattedDate}?latitude=${latitude}&longitude=${longitude}&method=${method}&tune=${tune}`;
       
       fetch(url)
         .then(response => response.json())
@@ -97,7 +101,9 @@ export default function PrayerTimes({ isRamadan, onPrayerTimesLoad }: PrayerTime
           if (data.code === 200) {
             const times = data.data.timings;
              const formatTime = (time: string) => {
+              // The API returns time in 24-hour format (e.g., "17:30")
               const parsedTime = parse(time, 'HH:mm', new Date());
+              // We convert it to the user's local timezone and format it to 12-hour AM/PM.
               const zonedTime = toZonedTime(parsedTime, timezone);
               return format(zonedTime, 'h:mm a');
             };
@@ -114,7 +120,7 @@ export default function PrayerTimes({ isRamadan, onPrayerTimesLoad }: PrayerTime
             setPrayerTimes(formattedTimes);
             onPrayerTimesLoad(formattedTimes);
           } else {
-            setError('Could not fetch prayer times. Using sample data.');
+            setError('Could not fetch prayer times. API returned an error.');
           }
         })
         .catch(() => {
@@ -132,13 +138,13 @@ export default function PrayerTimes({ isRamadan, onPrayerTimesLoad }: PrayerTime
         },
         () => {
           // Fallback to a default location if geolocation fails
-          setError('Location access denied. Fetching times for a default location.');
-          fetchPrayerTimes(25.2048, 55.2708, timezone); // Dubai coordinates
+          setError('Location access denied. Fetching times for Srinagar, Kashmir.');
+          fetchPrayerTimes(34.0837, 74.7973, timezone); // Srinagar coordinates
         }
       );
     } else {
-       setError('Geolocation not supported. Fetching times for a default location.');
-       fetchPrayerTimes(25.2048, 55.2708, timezone); // Dubai coordinates
+       setError('Geolocation not supported. Fetching times for Srinagar, Kashmir.');
+       fetchPrayerTimes(34.0837, 74.7973, timezone); // Srinagar coordinates
     }
 
   }, [onPrayerTimesLoad]);
@@ -175,9 +181,9 @@ export default function PrayerTimes({ isRamadan, onPrayerTimesLoad }: PrayerTime
             </div>
         ) : (
           <>
-            {isRamadan && prayerTimesWithIftar && (
+            {isRamadan && prayerTimesWithIftar && prayerTimesWithIftar.Maghrib && prayerTimesWithIftar.Fajr && (
               <div className="mb-6 grid grid-cols-1 gap-4 rounded-lg bg-accent/10 p-4 md:grid-cols-2">
-                <Countdown targetTime={prayerTimesWithIftar.Iftar} label="Countdown to Iftar" />
+                <Countdown targetTime={prayerTimesWithIftar.Maghrib} label="Countdown to Iftar" />
                 <Countdown targetTime={prayerTimesWithIftar.Fajr} label="Countdown to Suhoor ends (Fajr)" />
               </div>
             )}

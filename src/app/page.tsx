@@ -11,6 +11,28 @@ export default function Home() {
   const [isRamadan, setIsRamadan] = useState(false);
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimesType | null>(null);
 
+  useEffect(() => {
+    // Check if it's Ramadan when the component mounts
+    const checkRamadan = async () => {
+      try {
+        // Using a public API to check for Ramadan based on Hijri date
+        // This checks for the 9th month of the Hijri calendar.
+        const response = await fetch('https://api.aladhan.com/v1/gToH');
+        const data = await response.json();
+        if (data.code === 200 && data.data.hijri.month.number === 9) {
+          setIsRamadan(true);
+        } else {
+          setIsRamadan(false);
+        }
+      } catch (error) {
+        console.error("Could not check for Ramadan:", error);
+        // Fallback to false if API fails
+        setIsRamadan(false);
+      }
+    };
+    checkRamadan();
+  }, []);
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <Header isRamadan={isRamadan} onRamadanToggle={setIsRamadan} />
