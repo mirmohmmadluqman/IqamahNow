@@ -5,73 +5,89 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlarmClockCheck } from 'lucide-react';
 import type { PrayerTimesType } from './prayer-times';
-import { parse, isAfter, addDays } from 'date-fns';
+import { parse, isAfter, addDays, differenceInSeconds } from 'date-fns';
 
 interface NotificationCardProps {
     prayerTimes: PrayerTimesType | null;
     isRamadan: boolean;
 }
 
+type PrayerEvent = {
+    prayerName: string;
+    type: 'Adhan' | 'Iqamah';
+    time: Date;
+};
+
 const prayerOrder: (keyof Omit<PrayerTimesType, 'Sunrise' | 'Imsak'>)[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 
-const getNextPrayer = (prayerTimes: PrayerTimesType | null) => {
+const getNextPrayerEvent = (prayerTimes: PrayerTimesType | null): PrayerEvent | null => {
     if (!prayerTimes) return null;
 
     const now = new Date();
+    const events: PrayerEvent[] = [];
 
-    for (const prayer of prayerOrder) {
-        const prayerInfo = prayerTimes[prayer];
-        if (typeof prayerInfo === 'string') continue; // Skip Sunrise/Imsak
-
-        const iqamahTimeStr = prayerInfo.iqamah;
-        if (!iqamahTimeStr) continue;
-        
-        // Parsing time like "4:28 AM"
-        const iqamahTime = parse(iqamahTimeStr, 'h:mm a', new Date());
-
-        if (isAfter(iqamahTime, now)) {
-             return { name: prayer, time: iqamahTime };
+    // Create a list of all Adhan and Iqamah events for today
+    prayerOrder.forEach(prayerName => {
+        const prayerInfo = prayerTimes[prayerName];
+        if (typeof prayerInfo === 'object' && prayerInfo.adhan && prayerInfo.iqamah) {
+            const adhanTime = parse(prayerInfo.adhan, 'h:mm a', new Date());
+            const iqamahTime = parse(prayerInfo.iqamah, 'h:mm a', new Date());
+            
+            if (!isNaN(adhanTime.getTime())) {
+                 events.push({ prayerName, type: 'Adhan', time: adhanTime });
+            }
+            if (!isNaN(iqamahTime.getTime())) {
+                events.push({ prayerName, type: 'Iqamah', time: iqamahTime });
+            }
         }
+    });
+
+    // Find the first event in the future
+    const nextEvent = events.find(event => isAfter(event.time, now));
+
+    if (nextEvent) {
+        return nextEvent;
     }
 
-    // If all prayers for today are done, the next prayer is Fajr tomorrow.
+    // If all events for today are past, the next event is Fajr Adhan tomorrow
     const fajrInfo = prayerTimes.Fajr;
-    if (fajrInfo && typeof fajrInfo !== 'string' && fajrInfo.iqamah) {
-        const fajrIqamahTime = addDays(parse(fajrInfo.iqamah, 'h:mm a', new Date()), 1);
-        return { name: 'Fajr', time: fajrIqamahTime };
+    if (fajrInfo && typeof fajrInfo !== 'string' && fajrInfo.adhan) {
+        const fajrAdhanTime = addDays(parse(fajrInfo.adhan, 'h:mm a', new Date()), 1);
+        return { prayerName: 'Fajr', type: 'Adhan', time: fajrAdhanTime };
     }
-    
+
     return null;
 }
 
-const Countdown = ({ targetDate, prayerName }: { targetDate: Date; prayerName: string }) => {
-    const calculateTimeLeft = () => {
-        const difference = targetDate.getTime() - new Date().getTime();
-        let timeLeft = { hours: 0, minutes: 0, seconds: 0 };
-
-        if (difference > 0) {
-            timeLeft = {
-                hours: Math.floor(difference / (1000 * 60 * 60)),
-                minutes: Math.floor((difference / 1000 / 60) % 60),
-                seconds: Math.floor((difference / 1000) % 60),
-            };
-        }
-        return timeLeft;
-    };
-
-    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+const Countdown = ({ targetDate, prayerName, eventType }: { targetDate: Date; prayerName: string; eventType: 'Adhan' | 'Iqamah' }) => {
+    const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setTimeLeft(calculateTimeLeft());
-        }, 1000);
+        const calculateTimeLeft = () => {
+            const difference = differenceInSeconds(targetDate, new Date());
+            let newTimeLeft = { hours: 0, minutes: 0, seconds: 0 };
 
-        return () => clearTimeout(timer);
-    });
+            if (difference > 0) {
+                newTimeLeft = {
+                    hours: Math.floor(difference / 3600),
+                    minutes: Math.floor((difference % 3600) / 60),
+                    seconds: Math.floor(difference % 60),
+                };
+            }
+            setTimeLeft(newTimeLeft);
+        };
+        
+        calculateTimeLeft(); // Initial calculation
+        const timer = setInterval(calculateTimeLeft, 1000);
+
+        return () => clearInterval(timer);
+    }, [targetDate]);
+
+    const label = eventType === 'Adhan' ? `The prayer of ${prayerName} is in` : `The iqamah of ${prayerName} is in`;
 
     return (
         <div className="text-center">
-            <p className="text-muted-foreground">The prayer of {prayerName} is in</p>
+            <p className="text-muted-foreground">{label}</p>
             <div className="flex justify-center gap-4 mt-2">
                 <div>
                     <div className="text-3xl font-bold text-primary">{String(timeLeft.hours).padStart(2, '0')}</div>
@@ -92,23 +108,23 @@ const Countdown = ({ targetDate, prayerName }: { targetDate: Date; prayerName: s
 
 
 export default function NotificationCard({ prayerTimes, isRamadan }: NotificationCardProps) {
-    const [nextPrayerInfo, setNextPrayerInfo] = useState<{name: string, time: Date} | null>(null);
+    const [nextEvent, setNextEvent] = useState<PrayerEvent | null>(null);
 
     useEffect(() => {
         if(prayerTimes) {
-             const updateNextPrayer = () => {
-                setNextPrayerInfo(getNextPrayer(prayerTimes));
+             const updateNextPrayerEvent = () => {
+                setNextEvent(getNextPrayerEvent(prayerTimes));
             };
 
-            updateNextPrayer(); // Initial check
-            const interval = setInterval(updateNextPrayer, 1000 * 60); // Update every minute
+            updateNextPrayerEvent(); // Initial check
+            const interval = setInterval(updateNextPrayerEvent, 1000); // Check every second to switch smoothly
 
             return () => clearInterval(interval);
         }
     }, [prayerTimes]);
 
 
-    if (!prayerTimes || !nextPrayerInfo) {
+    if (!prayerTimes || !nextEvent) {
         return (
              <Card className="w-full bg-primary/10 border-primary/20">
                 <CardHeader className='pb-2'>
@@ -142,7 +158,7 @@ export default function NotificationCard({ prayerTimes, isRamadan }: Notificatio
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
-        <Countdown targetDate={nextPrayerInfo.time} prayerName={nextPrayerInfo.name} />
+        <Countdown targetDate={nextEvent.time} prayerName={nextEvent.prayerName} eventType={nextEvent.type} />
       </CardContent>
     </Card>
   );
