@@ -18,18 +18,21 @@ type PrayerEvent = {
     time: Date;
 };
 
-const prayerOrder: (keyof Omit<PrayerTimesType, 'Sunrise' | 'Imsak'>)[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+const prayerOrder: (keyof Omit<PrayerTimesType, 'Sunrise' | 'Imsak' | 'Jumuah'>)[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+const jumuahPrayerOrder: (keyof Omit<PrayerTimesType, 'Sunrise' | 'Imsak' | 'Dhuhr'>)[] = ['Fajr', 'Jumuah', 'Asr', 'Maghrib', 'Isha'];
 
 const getNextPrayerEvent = (prayerTimes: PrayerTimesType | null): PrayerEvent | null => {
     if (!prayerTimes) return null;
 
     const now = new Date();
+    const isFriday = now.getDay() === 5;
+    const currentPrayerOrder = isFriday ? jumuahPrayerOrder : prayerOrder;
     const events: PrayerEvent[] = [];
-
+    
     // Create a list of all Adhan and Iqamah events for today
-    prayerOrder.forEach(prayerName => {
-        const prayerInfo = prayerTimes[prayerName];
-        if (typeof prayerInfo === 'object' && prayerInfo.adhan && prayerInfo.iqamah) {
+    currentPrayerOrder.forEach(prayerName => {
+        const prayerInfo = prayerTimes[prayerName as keyof PrayerTimesType]; // Cast to handle Jumuah
+        if (typeof prayerInfo === 'object' && 'adhan' in prayerInfo && 'iqamah' in prayerInfo) {
             const adhanTime = parse(prayerInfo.adhan, 'h:mm a', new Date());
             const iqamahTime = parse(prayerInfo.iqamah, 'h:mm a', new Date());
             
@@ -83,7 +86,7 @@ const Countdown = ({ targetDate, prayerName, eventType }: { targetDate: Date; pr
         return () => clearInterval(timer);
     }, [targetDate]);
 
-    const label = eventType === 'Adhan' ? `The prayer of ${prayerName} is in` : `The iqamah of ${prayerName} is in`;
+    const label = eventType === 'Adhan' ? `The prayer of ${prayerName} is in` : `The iqamah for ${prayerName} is in`;
 
     return (
         <div className="text-center">

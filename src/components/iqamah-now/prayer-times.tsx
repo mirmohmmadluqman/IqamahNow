@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sunrise, Sun, Sunset, Moon, UtensilsCrossed } from 'lucide-react';
+import { Sunrise, Sun, Sunset, Moon, UtensilsCrossed, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parse } from 'date-fns';
 
@@ -14,6 +14,7 @@ export type PrayerTimesType = {
   Asr: PrayerInfo;
   Maghrib: PrayerInfo;
   Isha: PrayerInfo;
+  Jumuah: PrayerInfo;
   Sunrise: string;
   Imsak: string;
 };
@@ -32,6 +33,7 @@ const prayerIcons = {
   Isha: <Moon className="h-6 w-6" />,
   Imsak: <UtensilsCrossed className="h-6 w-6" />,
   Iftar: <UtensilsCrossed className="h-6 w-6" />,
+  Jumuah: <Building2 className="h-6 w-6" />
 };
 
 const Countdown = ({ targetTime, label }: { targetTime: string; label: string }) => {
@@ -82,23 +84,43 @@ const Countdown = ({ targetTime, label }: { targetTime: string; label: string })
 
 export default function PrayerTimes({ isRamadan, prayerTimes }: PrayerTimesProps) {
   const loading = !prayerTimes;
+  const [isClient, setIsClient] = useState(false);
 
-  const regularPrayers: (keyof PrayerTimesType)[] = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-  const ramadanPrayers: (keyof PrayerTimesType | 'Iftar')[] = ['Imsak', ...regularPrayers.filter(p => p !== 'Sunrise'), 'Iftar'];
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const isFriday = isClient && new Date().getDay() === 5;
+
+
+  const regularPrayers: (keyof Omit<PrayerTimesType, 'Jumuah'>)[] = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+  const jumuahPrayers: (keyof Omit<PrayerTimesType, 'Dhuhr'>)[] = ['Fajr', 'Sunrise', 'Jumuah', 'Asr', 'Maghrib', 'Isha'];
+
+  const ramadanPrayers: (keyof PrayerTimesType | 'Iftar')[] = ['Imsak', ...regularPrayers.filter(p => p !== 'Sunrise' && p !== 'Dhuhr'), 'Iftar'];
+  const ramadanJumuahPrayers: (keyof PrayerTimesType | 'Iftar')[] = ['Imsak', ...jumuahPrayers.filter(p => p !== 'Sunrise'), 'Iftar'];
   
   // Use Maghrib adhan time for Iftar
   const prayerTimesWithIftar = prayerTimes ? { ...prayerTimes, Iftar: prayerTimes.Maghrib.adhan } : null;
 
-  const prayersToShow = isRamadan ? ramadanPrayers : regularPrayers;
+  let prayersToShow: (keyof PrayerTimesType | 'Iftar')[];
+
+  if(isRamadan){
+      prayersToShow = isFriday ? ramadanJumuahPrayers : ramadanPrayers;
+  } else {
+      prayersToShow = isFriday ? jumuahPrayers : regularPrayers;
+  }
+  
+  const gridCols = `lg:grid-cols-${prayersToShow.length}`;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl font-headline">Today's Prayer Times</CardTitle>
+        <CardDescription>Masjid Salafiya Diyarwani New-Colony Batamaloo, Srinagar 190009</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
-            <div className={cn("grid gap-4", "grid-cols-2 sm:grid-cols-3", isRamadan ? "lg:grid-cols-7" : "lg:grid-cols-6")}>
+            <div className={cn("grid gap-4 grid-cols-2 sm:grid-cols-3", gridCols)}>
               {prayersToShow.map((prayer) => (
                 <Card key={prayer} className="flex flex-col items-center justify-center p-4 text-center">
                   <Skeleton className="h-8 w-8 rounded-full mb-2" />
@@ -115,7 +137,7 @@ export default function PrayerTimes({ isRamadan, prayerTimes }: PrayerTimesProps
                 <Countdown targetTime={prayerTimesWithIftar.Fajr.adhan} label="Countdown to Suhoor ends (Fajr)" />
               </div>
             )}
-            <div className={cn("grid gap-4", "grid-cols-2 sm:grid-cols-3", isRamadan ? "lg:grid-cols-7" : "lg:grid-cols-6")}>
+            <div className={cn("grid gap-4 grid-cols-2 sm:grid-cols-3", gridCols)}>
               {prayerTimesWithIftar && prayersToShow.map((prayer) => {
                 const prayerInfo = prayerTimesWithIftar[prayer as keyof typeof prayerTimesWithIftar];
                 const isSingleTime = typeof prayerInfo === 'string';
@@ -141,6 +163,9 @@ export default function PrayerTimes({ isRamadan, prayerTimes }: PrayerTimesProps
           </>
         )}
       </CardContent>
+       <CardFooter className="justify-center text-muted-foreground text-sm">
+        <p>The Islamic Digital Signage</p>
+      </CardFooter>
     </Card>
   );
 }
